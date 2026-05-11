@@ -412,10 +412,21 @@ def run_matrix(args: argparse.Namespace) -> None:
     options.hardware_mapping = args.hardware_mapping
     options.gpio_slowdown = args.gpio_slowdown
     options.brightness = args.brightness
+    options.pwm_bits = args.pwm_bits
+    options.pwm_dither_bits = args.pwm_dither_bits
+    options.pwm_lsb_nanoseconds = args.pwm_lsb_nanoseconds
+    options.scan_mode = args.scan_mode
+    options.multiplexing = args.multiplexing
+    options.row_address_type = args.row_address_type
+    options.led_rgb_sequence = args.rgb_sequence
+    options.pixel_mapper_config = args.pixel_mapper
+    options.panel_type = args.panel_type
     options.disable_hardware_pulsing = args.no_hardware_pulse
+    options.limit_refresh_rate_hz = args.limit_refresh_rate_hz
 
     matrix = RGBMatrix(options=options)
     canvas = matrix.CreateFrameCanvas()
+    image = Image.new("RGB", (SIZE, SIZE))
     running = True
 
     def stop(_signum: int, _frame: object) -> None:
@@ -431,15 +442,9 @@ def run_matrix(args: argparse.Namespace) -> None:
         while running:
             frame_started = time.monotonic()
             state.update(frame_started)
-            pixels = state.render_pixels()
+            image.putdata(state.render_pixels())
             canvas.Clear()
-
-            for y_pos in range(min(SIZE, args.rows)):
-                for x_pos in range(min(SIZE, args.cols * args.chain_length)):
-                    red, green, blue = pixels[y_pos * SIZE + x_pos]
-                    if red or green or blue:
-                        canvas.SetPixel(x_pos, y_pos, red, green, blue)
-
+            canvas.SetImage(image)
             canvas = matrix.SwapOnVSync(canvas)
             elapsed = time.monotonic() - frame_started
             time.sleep(max(0.0, frame_seconds - elapsed))
@@ -455,8 +460,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--chain-length", type=int, default=1)
     parser.add_argument("--parallel", type=int, default=1)
     parser.add_argument("--hardware-mapping", default="regular")
-    parser.add_argument("--gpio-slowdown", type=int, default=4)
-    parser.add_argument("--brightness", type=int, default=70)
+    parser.add_argument("--gpio-slowdown", type=int, default=5)
+    parser.add_argument("--brightness", type=int, default=35)
+    parser.add_argument("--pwm-bits", type=int, default=1)
+    parser.add_argument("--pwm-dither-bits", type=int, default=0)
+    parser.add_argument("--pwm-lsb-nanoseconds", type=int, default=130)
+    parser.add_argument("--scan-mode", type=int, default=0)
+    parser.add_argument("--multiplexing", type=int, default=0)
+    parser.add_argument("--row-address-type", type=int, default=0)
+    parser.add_argument("--rgb-sequence", default="RGB")
+    parser.add_argument("--pixel-mapper", default="")
+    parser.add_argument("--panel-type", default="")
+    parser.add_argument("--limit-refresh-rate-hz", type=int, default=120)
     parser.add_argument("--no-hardware-pulse", action="store_true")
     parser.add_argument("--fps", type=float, default=30.0)
     parser.add_argument("--letter-delay", type=float, default=30.0)

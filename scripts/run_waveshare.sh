@@ -13,5 +13,9 @@ exec "$PYTHON" kaleidoscope_matrix.py \
   --no-hardware-pulse \
   --rows 64 \
   --cols 64 \
-  --gpio-slowdown 4 \
+  --gpio-slowdown 5 \
+  --brightness 35 \
+  --pwm-bits 1 \
+  --pwm-dither-bits 0 \
+  --limit-refresh-rate-hz 120 \
   "$@"
