@@ -6,17 +6,15 @@
 
 ```bash
 sudo apt update
-sudo apt install -y git build-essential python3-dev python3-pil
+sudo apt install -y git build-essential cmake ninja-build python3-dev python3-pil python3-pip python3-venv
 
 cd ~
 test -d rpi-rgb-led-matrix || git clone https://github.com/hzeller/rpi-rgb-led-matrix.git
-cd ~/rpi-rgb-led-matrix
-make build-python PYTHON=$(command -v python3)
-sudo make install-python PYTHON=$(command -v python3)
 
 cd ~
 git clone https://github.com/timothyosm/waveshare-kaleidoscope-matrix.git
 cd waveshare-kaleidoscope-matrix
+./scripts/install_pi.sh
 sudo ./scripts/run_waveshare.sh
 ```
 
@@ -25,7 +23,7 @@ sudo ./scripts/run_waveshare.sh
 For the Waveshare 64x64 HUB75 wiring from Waveshare's guide:
 
 ```bash
-sudo python3 kaleidoscope_matrix.py \
+sudo ./.venv/bin/python3 kaleidoscope_matrix.py \
   --hardware-mapping regular \
   --no-hardware-pulse \
   --rows 64 \
@@ -36,7 +34,7 @@ sudo python3 kaleidoscope_matrix.py \
 If you are actually using an Adafruit HAT/Bonnet, try:
 
 ```bash
-sudo python3 kaleidoscope_matrix.py \
+sudo ./.venv/bin/python3 kaleidoscope_matrix.py \
   --hardware-mapping adafruit-hat \
   --rows 64 \
   --cols 64 \
@@ -64,4 +62,3 @@ sudo cp systemd/kaleidoscope-matrix.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now kaleidoscope-matrix
 ```
-
