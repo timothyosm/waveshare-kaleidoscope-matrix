@@ -26,4 +26,7 @@ exec "$PYTHON" kaleidoscope_matrix.py \
   --speed 0.58 \
   --brush-radius 1.45 \
   --neighbor-boost-threshold 6 \
+  --audio \
+  --chime-volume 0.035 \
+  --chime-duration 0.18 \
   "$@"

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 sudo apt update
-sudo apt install -y git build-essential cmake ninja-build python3-dev python3-pil python3-pip python3-venv
+sudo apt install -y git build-essential cmake ninja-build python3-dev python3-pil python3-pip python3-venv alsa-utils
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 

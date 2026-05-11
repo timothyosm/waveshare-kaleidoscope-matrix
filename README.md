@@ -1,12 +1,12 @@
 # Waveshare Kaleidoscope Matrix
 
-64x64 Raspberry Pi HUB75 kaleidoscope animation. This version keeps a slow, calligraphic symmetric pattern running continuously, with no audio and no letter drawing.
+64x64 Raspberry Pi HUB75 kaleidoscope animation. This version keeps a slow, calligraphic symmetric pattern running continuously, with soft chimes when LEDs light up and no letter drawing.
 
 ## Raspberry Pi Setup
 
 ```bash
 sudo apt update
-sudo apt install -y git build-essential cmake ninja-build python3-dev python3-pil python3-pip python3-venv
+sudo apt install -y git build-essential cmake ninja-build python3-dev python3-pil python3-pip python3-venv alsa-utils
 
 cd ~
 test -d rpi-rgb-led-matrix || git clone https://github.com/hzeller/rpi-rgb-led-matrix.git
@@ -33,13 +33,17 @@ sudo ./.venv/bin/python3 kaleidoscope_matrix.py \
   --color 182,192,239 \
   --pwm-bits 5 \
   --pwm-dither-bits 0 \
+  --limit-refresh-rate-hz 120 \
   --fade 0.985 \
   --ink 0.32 \
   --turn-chance 0.035 \
   --curve-chance 0.2 \
   --speed 0.58 \
   --brush-radius 1.45 \
-  --neighbor-boost-threshold 6
+  --neighbor-boost-threshold 6 \
+  --audio \
+  --chime-volume 0.035 \
+  --chime-duration 0.18
 ```
 
 More delicate:
@@ -52,6 +56,12 @@ More ornate:
 
 ```bash
 sudo ./scripts/run_waveshare.sh --ink 0.44 --fade 0.99 --turn-chance 0.055 --curve-chance 0.32
+```
+
+No sound:
+
+```bash
+sudo ./scripts/run_waveshare.sh --no-audio
 ```
 
 If you are actually using an Adafruit HAT/Bonnet, try:

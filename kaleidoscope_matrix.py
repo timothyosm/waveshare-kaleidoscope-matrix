@@ -4,10 +4,14 @@
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import math
 import random
 import signal
+import struct
+import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 try:
@@ -19,6 +23,113 @@ except ImportError as error:
 SIZE = 64
 BLACK = (0, 0, 0)
 DEFAULT_COLOR = (182, 192, 239)
+
+
+class ChimeSynth:
+    def __init__(
+        self,
+        volume: float,
+        duration: float,
+        sample_rate: int,
+        max_pending: int,
+        device: str,
+    ) -> None:
+        self.volume = volume
+        self.duration = duration
+        self.sample_rate = sample_rate
+        self.pending: deque[tuple[float, float]] = deque(maxlen=max_pending)
+        self.lock = threading.Lock()
+        self.running = True
+        self.process: subprocess.Popen[bytes] | None = None
+        self.thread: threading.Thread | None = None
+        self.device = device
+        self._start()
+
+    def _start(self) -> None:
+        command = [
+            "aplay",
+            "-q",
+            "-t",
+            "raw",
+            "-f",
+            "S16_LE",
+            "-r",
+            str(self.sample_rate),
+            "-c",
+            "1",
+        ]
+        if self.device:
+            command[1:1] = ["-D", self.device]
+
+        try:
+            self.process = subprocess.Popen(command, stdin=subprocess.PIPE)
+        except OSError as error:
+            print(f"Audio disabled: {error}", file=sys.stderr)
+            self.running = False
+            return
+
+        self.thread = threading.Thread(target=self._audio_loop, daemon=True)
+        self.thread.start()
+
+    def trigger(self, x_pos: int, y_pos: int, intensity: float) -> None:
+        if not self.running:
+            return
+
+        scale = (0, 2, 4, 7, 9, 12, 14, 16)
+        degree = (x_pos * 3 + y_pos * 5) % len(scale)
+        octave = max(0, min(3, (SIZE - 1 - y_pos) // 16))
+        frequency = 174.61 * (2 ** ((scale[degree] + octave * 12) / 12))
+        gain = self.volume * max(0.18, min(1.0, intensity))
+
+        with self.lock:
+            self.pending.append((frequency, gain))
+
+    def stop(self) -> None:
+        self.running = False
+        if self.thread:
+            self.thread.join(timeout=0.5)
+        if self.process and self.process.stdin:
+            self.process.stdin.close()
+        if self.process:
+            self.process.terminate()
+
+    def _audio_loop(self) -> None:
+        if not self.process or not self.process.stdin:
+            return
+
+        active: list[dict[str, float]] = []
+        chunk_size = 512
+        attack = 0.018
+
+        while self.running:
+            with self.lock:
+                while self.pending:
+                    frequency, gain = self.pending.popleft()
+                    active.append({"frequency": frequency, "gain": gain, "phase": 0.0, "age": 0.0})
+
+            chunk = bytearray()
+            for _ in range(chunk_size):
+                sample = 0.0
+                for note in active:
+                    age = note["age"]
+                    if age < self.duration:
+                        attack_level = min(1.0, age / attack)
+                        envelope = attack_level * math.exp(-4.8 * age / self.duration)
+                        sample += math.sin(note["phase"]) * note["gain"] * envelope
+                        note["phase"] += math.tau * note["frequency"] / self.sample_rate
+                    note["age"] += 1 / self.sample_rate
+
+                sample = max(-1.0, min(1.0, sample))
+                chunk.extend(struct.pack("<h", round(sample * 32767)))
+
+            active = [note for note in active if note["age"] < self.duration]
+
+            try:
+                self.process.stdin.write(chunk)
+                self.process.stdin.flush()
+            except (BrokenPipeError, OSError):
+                self.running = False
+                break
 
 
 class Kaleidoscope:
@@ -33,6 +144,8 @@ class Kaleidoscope:
         speed: float,
         brush_radius: float,
         neighbor_boost_threshold: int,
+        chime_synth: ChimeSynth | None = None,
+        chime_threshold: float = 0.12,
     ) -> None:
         self.random = random.SystemRandom()
         self.color = color
@@ -44,6 +157,8 @@ class Kaleidoscope:
         self.speed = speed
         self.brush_radius = brush_radius
         self.neighbor_boost_threshold = neighbor_boost_threshold
+        self.chime_synth = chime_synth
+        self.chime_threshold = chime_threshold
         self.cells = [[0.0 for _ in range(SIZE)] for _ in range(SIZE)]
         self.x = 0.0
         self.y = 0.0
@@ -150,7 +265,16 @@ class Kaleidoscope:
                 if distance > radius:
                     continue
                 weight = (1 - distance / radius) ** 1.7
-                self.cells[y_cell][x_cell] = min(1.0, self.cells[y_cell][x_cell] + amount * weight)
+                old_value = self.cells[y_cell][x_cell]
+                new_value = min(1.0, old_value + amount * weight)
+                self.cells[y_cell][x_cell] = new_value
+
+                if (
+                    self.chime_synth
+                    and old_value < self.chime_threshold <= new_value
+                    and amount * weight > 0.04
+                ):
+                    self.chime_synth.trigger(x_cell, y_cell, new_value)
 
     def _step(self) -> None:
         center = (SIZE - 1) / 2
@@ -193,7 +317,7 @@ def parse_color(value: str) -> tuple[int, int, int]:
     return color  # type: ignore[return-value]
 
 
-def create_state(args: argparse.Namespace) -> Kaleidoscope:
+def create_state(args: argparse.Namespace, chime_synth: ChimeSynth | None = None) -> Kaleidoscope:
     return Kaleidoscope(
         color=args.color,
         fade=args.fade,
@@ -204,6 +328,8 @@ def create_state(args: argparse.Namespace) -> Kaleidoscope:
         speed=args.speed,
         brush_radius=args.brush_radius,
         neighbor_boost_threshold=args.neighbor_boost_threshold,
+        chime_synth=chime_synth,
+        chime_threshold=args.chime_threshold,
     )
 
 
@@ -227,7 +353,14 @@ def run_matrix(args: argparse.Namespace) -> None:
             "rgbmatrix is not installed. Run ./scripts/install_pi.sh on the Pi first."
         ) from error
 
-    state = create_state(args)
+    chime_synth = ChimeSynth(
+        volume=args.chime_volume,
+        duration=args.chime_duration,
+        sample_rate=args.chime_sample_rate,
+        max_pending=args.chime_max_pending,
+        device=args.audio_device,
+    ) if args.audio else None
+    state = create_state(args, chime_synth)
 
     options = RGBMatrixOptions()
     options.rows = args.rows
@@ -274,6 +407,8 @@ def run_matrix(args: argparse.Namespace) -> None:
             elapsed = time.monotonic() - frame_started
             time.sleep(max(0.0, frame_seconds - elapsed))
     finally:
+        if chime_synth:
+            chime_synth.stop()
         canvas.Clear()
         matrix.SwapOnVSync(canvas)
 
@@ -307,6 +442,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--speed", type=float, default=0.58)
     parser.add_argument("--brush-radius", type=float, default=1.45)
     parser.add_argument("--neighbor-boost-threshold", type=int, default=6)
+    parser.add_argument("--audio", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--audio-device", default="")
+    parser.add_argument("--chime-volume", type=float, default=0.035)
+    parser.add_argument("--chime-duration", type=float, default=0.18)
+    parser.add_argument("--chime-sample-rate", type=int, default=22050)
+    parser.add_argument("--chime-max-pending", type=int, default=56)
+    parser.add_argument("--chime-threshold", type=float, default=0.14)
     parser.add_argument("--color", type=parse_color, default=DEFAULT_COLOR)
     parser.add_argument("--preview", type=Path)
     parser.add_argument("--preview-steps", type=int, default=700)
