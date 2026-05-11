@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import random
 import signal
 import sys
@@ -16,7 +17,6 @@ except ImportError as error:
 
 
 SIZE = 64
-DIRECTIONS = ((0, -1), (1, 0), (0, 1), (-1, 0))
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 
@@ -25,47 +25,80 @@ class Kaleidoscope:
     def __init__(
         self,
         color: tuple[int, int, int],
+        fade: float,
+        ink: float,
+        step_stride: int,
+        turn_chance: float,
+        curve_chance: float,
+        speed: float,
+        brush_radius: float,
     ) -> None:
         self.random = random.SystemRandom()
         self.color = color
-        self.cells = [[False for _ in range(SIZE)] for _ in range(SIZE)]
-        self.ant_x = 0
-        self.ant_y = 0
-        self.ant_direction = 0
+        self.fade = fade
+        self.ink = ink
+        self.step_stride = step_stride
+        self.turn_chance = turn_chance
+        self.curve_chance = curve_chance
+        self.speed = speed
+        self.brush_radius = brush_radius
+        self.cells = [[0.0 for _ in range(SIZE)] for _ in range(SIZE)]
+        self.x = 0.0
+        self.y = 0.0
+        self.heading = 0.0
+        self.curl = 0.0
+        self.phase = 0.0
         self.reset(0.0)
 
     def reset(self, now: float) -> None:
         for row in self.cells:
             for x_pos in range(SIZE):
-                row[x_pos] = False
+                row[x_pos] = 0.0
 
-        self.ant_x = self.random.randrange(SIZE)
-        self.ant_y = self.random.randrange(SIZE)
-        self.ant_direction = self.random.randrange(len(DIRECTIONS))
+        center = (SIZE - 1) / 2
+        self.x = center + self.random.uniform(-4.0, 4.0)
+        self.y = center + self.random.uniform(-4.0, 4.0)
+        self.heading = self.random.random() * math.tau
+        self.curl = self.random.uniform(-0.035, 0.035)
+        self.phase = self.random.random() * math.tau
         self._seed_random_pattern()
 
     def update(self, _now: float) -> None:
-        self._step()
+        self._fade()
+        for _ in range(self.step_stride):
+            self._step()
 
     def render_pixels(self) -> list[tuple[int, int, int]]:
         pixels = [BLACK for _ in range(SIZE * SIZE)]
+        red, green, blue = self.color
 
         for y_pos, row in enumerate(self.cells):
-            for x_pos, enabled in enumerate(row):
-                if enabled:
-                    pixels[y_pos * SIZE + x_pos] = self.color
+            for x_pos, value in enumerate(row):
+                if value > 0.01:
+                    pixels[y_pos * SIZE + x_pos] = (
+                        min(255, round(red * value)),
+                        min(255, round(green * value)),
+                        min(255, round(blue * value)),
+                    )
 
-        ant_index = self.ant_y * SIZE + self.ant_x
-        pixels[ant_index] = BLACK if self.cells[self.ant_y][self.ant_x] else self.color
         return pixels
 
     def _seed_random_pattern(self) -> None:
-        seed_flips = 8 + self.random.randrange(17)
+        seed_flips = 2 + self.random.randrange(5)
 
         for _ in range(seed_flips):
-            self._flip_symmetric_cells(self.random.randrange(SIZE), self.random.randrange(SIZE))
+            angle = self.random.random() * math.tau
+            radius = self.random.randrange(5, 22)
+            x_pos = (SIZE - 1) / 2 + math.cos(angle) * radius
+            y_pos = (SIZE - 1) / 2 + math.sin(angle) * radius
+            self._ink_symmetric_cells(x_pos, y_pos, self.ink * 0.65)
 
-    def _symmetry_points(self, x_pos: int, y_pos: int) -> list[tuple[int, int]]:
+    def _fade(self) -> None:
+        for row in self.cells:
+            for x_pos, value in enumerate(row):
+                row[x_pos] = value * self.fade
+
+    def _symmetry_points(self, x_pos: float, y_pos: float) -> list[tuple[float, float]]:
         max_pos = SIZE - 1
         points = (
             (x_pos, y_pos),
@@ -80,30 +113,55 @@ class Kaleidoscope:
 
         return list(dict.fromkeys(points))
 
-    def _flip_symmetric_cells(self, x_pos: int, y_pos: int) -> None:
+    def _ink_symmetric_cells(self, x_pos: float, y_pos: float, amount: float) -> None:
         for point_x, point_y in self._symmetry_points(x_pos, y_pos):
-            self.cells[point_y][point_x] = not self.cells[point_y][point_x]
+            self._splat(point_x, point_y, amount)
+
+    def _splat(self, x_pos: float, y_pos: float, amount: float) -> None:
+        radius = max(0.5, self.brush_radius)
+        min_x = math.floor(x_pos - radius)
+        max_x = math.ceil(x_pos + radius)
+        min_y = math.floor(y_pos - radius)
+        max_y = math.ceil(y_pos + radius)
+
+        for y_cell in range(min_y, max_y + 1):
+            if y_cell < 0 or y_cell >= SIZE:
+                continue
+            for x_cell in range(min_x, max_x + 1):
+                if x_cell < 0 or x_cell >= SIZE:
+                    continue
+                distance = math.hypot(x_cell - x_pos, y_cell - y_pos)
+                if distance > radius:
+                    continue
+                weight = (1 - distance / radius) ** 1.7
+                self.cells[y_cell][x_cell] = min(1.0, self.cells[y_cell][x_cell] + amount * weight)
 
     def _step(self) -> None:
-        if self.cells[self.ant_y][self.ant_x]:
-            self.ant_direction = (self.ant_direction + 3) % len(DIRECTIONS)
-        else:
-            self.ant_direction = (self.ant_direction + 1) % len(DIRECTIONS)
+        center = (SIZE - 1) / 2
+        dx_center = center - self.x
+        dy_center = center - self.y
+        distance_from_center = math.hypot(dx_center, dy_center)
 
-        self._flip_symmetric_cells(self.ant_x, self.ant_y)
+        if self.random.random() < self.turn_chance:
+            self.curl += self.random.uniform(-0.05, 0.05)
 
-        dx, dy = DIRECTIONS[self.ant_direction]
-        next_x = self.ant_x + dx
-        next_y = self.ant_y + dy
+        self.curl *= 0.985
+        self.phase += 0.045
+        self.heading += self.curl + math.sin(self.phase) * self.curve_chance * 0.045
 
-        if next_x < 0 or next_x >= SIZE or next_y < 0 or next_y >= SIZE:
-            self.ant_direction = (self.ant_direction + 2) % len(DIRECTIONS)
-            dx, dy = DIRECTIONS[self.ant_direction]
-            next_x = self.ant_x + dx
-            next_y = self.ant_y + dy
+        if distance_from_center > 25:
+            target_heading = math.atan2(dy_center, dx_center)
+            turn = math.atan2(math.sin(target_heading - self.heading), math.cos(target_heading - self.heading))
+            self.heading += turn * 0.06
 
-        self.ant_x = next_x
-        self.ant_y = next_y
+        self._ink_symmetric_cells(self.x, self.y, self.ink)
+        self.x += math.cos(self.heading) * self.speed
+        self.y += math.sin(self.heading) * self.speed
+
+        if self.x < 1 or self.x > SIZE - 2 or self.y < 1 or self.y > SIZE - 2:
+            self.heading = math.atan2(center - self.y, center - self.x) + self.random.uniform(-0.5, 0.5)
+            self.x = min(SIZE - 2, max(1, self.x))
+            self.y = min(SIZE - 2, max(1, self.y))
 
 
 def parse_color(value: str) -> tuple[int, int, int]:
@@ -122,6 +180,13 @@ def parse_color(value: str) -> tuple[int, int, int]:
 def create_state(args: argparse.Namespace) -> Kaleidoscope:
     return Kaleidoscope(
         color=args.color,
+        fade=args.fade,
+        ink=args.ink,
+        step_stride=args.step_stride,
+        turn_chance=args.turn_chance,
+        curve_chance=args.curve_chance,
+        speed=args.speed,
+        brush_radius=args.brush_radius,
     )
 
 
@@ -217,6 +282,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--limit-refresh-rate-hz", type=int, default=120)
     parser.add_argument("--no-hardware-pulse", action="store_true")
     parser.add_argument("--fps", type=float, default=30.0)
+    parser.add_argument("--fade", type=float, default=0.985)
+    parser.add_argument("--ink", type=float, default=0.32)
+    parser.add_argument("--step-stride", type=int, default=1)
+    parser.add_argument("--turn-chance", type=float, default=0.035)
+    parser.add_argument("--curve-chance", type=float, default=0.2)
+    parser.add_argument("--speed", type=float, default=0.58)
+    parser.add_argument("--brush-radius", type=float, default=1.45)
     parser.add_argument("--color", type=parse_color, default=RED)
     parser.add_argument("--preview", type=Path)
     parser.add_argument("--preview-steps", type=int, default=700)

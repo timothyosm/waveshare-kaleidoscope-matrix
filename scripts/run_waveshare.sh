@@ -15,7 +15,13 @@ exec "$PYTHON" kaleidoscope_matrix.py \
   --cols 64 \
   --gpio-slowdown 5 \
   --brightness 35 \
-  --pwm-bits 1 \
+  --pwm-bits 5 \
   --pwm-dither-bits 0 \
   --limit-refresh-rate-hz 120 \
+  --fade 0.985 \
+  --ink 0.32 \
+  --turn-chance 0.035 \
+  --curve-chance 0.2 \
+  --speed 0.58 \
+  --brush-radius 1.45 \
   "$@"

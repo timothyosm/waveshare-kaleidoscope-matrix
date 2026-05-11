@@ -1,6 +1,6 @@
 # Waveshare Kaleidoscope Matrix
 
-64x64 Raspberry Pi HUB75 kaleidoscope animation. This version keeps the ant-driven symmetric pattern running continuously, with no audio and no letter drawing.
+64x64 Raspberry Pi HUB75 kaleidoscope animation. This version keeps a slow, calligraphic symmetric pattern running continuously, with no audio and no letter drawing.
 
 ## Raspberry Pi Setup
 
@@ -30,8 +30,26 @@ sudo ./.venv/bin/python3 kaleidoscope_matrix.py \
   --cols 64 \
   --gpio-slowdown 5 \
   --brightness 35 \
-  --pwm-bits 1 \
-  --pwm-dither-bits 0
+  --pwm-bits 5 \
+  --pwm-dither-bits 0 \
+  --fade 0.985 \
+  --ink 0.32 \
+  --turn-chance 0.035 \
+  --curve-chance 0.2 \
+  --speed 0.58 \
+  --brush-radius 1.45
+```
+
+More delicate:
+
+```bash
+sudo ./scripts/run_waveshare.sh --ink 0.24 --fade 0.98 --turn-chance 0.02
+```
+
+More ornate:
+
+```bash
+sudo ./scripts/run_waveshare.sh --ink 0.44 --fade 0.99 --turn-chance 0.055 --curve-chance 0.32
 ```
 
 If you are actually using an Adafruit HAT/Bonnet, try:
