@@ -15,7 +15,7 @@ exec "$PYTHON" kaleidoscope_matrix.py \
   --cols 64 \
   --gpio-slowdown 5 \
   --brightness 35 \
-  --color 255,255,255 \
+  --color 182,192,239 \
   --pwm-bits 5 \
   --pwm-dither-bits 0 \
   --limit-refresh-rate-hz 120 \
