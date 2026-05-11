@@ -144,6 +144,7 @@ class Kaleidoscope:
         speed: float,
         brush_radius: float,
         neighbor_boost_threshold: int,
+        mirrors: int,
         chime_synth: ChimeSynth | None = None,
         chime_threshold: float = 0.12,
     ) -> None:
@@ -157,6 +158,7 @@ class Kaleidoscope:
         self.speed = speed
         self.brush_radius = brush_radius
         self.neighbor_boost_threshold = neighbor_boost_threshold
+        self.mirrors = max(1, mirrors)
         self.chime_synth = chime_synth
         self.chime_threshold = chime_threshold
         self.cells = [[0.0 for _ in range(SIZE)] for _ in range(SIZE)]
@@ -230,19 +232,21 @@ class Kaleidoscope:
                 row[x_pos] = value * self.fade
 
     def _symmetry_points(self, x_pos: float, y_pos: float) -> list[tuple[float, float]]:
-        max_pos = SIZE - 1
-        points = (
-            (x_pos, y_pos),
-            (max_pos - x_pos, y_pos),
-            (x_pos, max_pos - y_pos),
-            (max_pos - x_pos, max_pos - y_pos),
-            (y_pos, x_pos),
-            (max_pos - y_pos, x_pos),
-            (y_pos, max_pos - x_pos),
-            (max_pos - y_pos, max_pos - x_pos),
-        )
+        center = (SIZE - 1) / 2
+        dx = x_pos - center
+        dy = y_pos - center
+        points = []
 
-        return list(dict.fromkeys(points))
+        for index in range(self.mirrors):
+            angle = math.tau * index / self.mirrors
+            cos_angle = math.cos(angle)
+            sin_angle = math.sin(angle)
+            points.append((
+                center + dx * cos_angle - dy * sin_angle,
+                center + dx * sin_angle + dy * cos_angle,
+            ))
+
+        return points
 
     def _ink_symmetric_cells(self, x_pos: float, y_pos: float, amount: float) -> None:
         for point_x, point_y in self._symmetry_points(x_pos, y_pos):
@@ -328,6 +332,7 @@ def create_state(args: argparse.Namespace, chime_synth: ChimeSynth | None = None
         speed=args.speed,
         brush_radius=args.brush_radius,
         neighbor_boost_threshold=args.neighbor_boost_threshold,
+        mirrors=args.mirrors,
         chime_synth=chime_synth,
         chime_threshold=args.chime_threshold,
     )
@@ -442,6 +447,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--speed", type=float, default=0.58)
     parser.add_argument("--brush-radius", type=float, default=1.45)
     parser.add_argument("--neighbor-boost-threshold", type=int, default=6)
+    parser.add_argument("--mirrors", type=int, default=8)
     parser.add_argument("--audio", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--audio-device", default="")
     parser.add_argument("--chime-volume", type=float, default=0.035)

@@ -41,6 +41,7 @@ sudo ./.venv/bin/python3 kaleidoscope_matrix.py \
   --speed 0.58 \
   --brush-radius 1.45 \
   --neighbor-boost-threshold 6 \
+  --mirrors 8 \
   --audio \
   --chime-volume 0.035 \
   --chime-duration 0.18
@@ -56,6 +57,16 @@ More ornate:
 
 ```bash
 sudo ./scripts/run_waveshare.sh --ink 0.44 --fade 0.99 --turn-chance 0.055 --curve-chance 0.32
+```
+
+Change mirror count:
+
+```bash
+sudo ./scripts/run_waveshare.sh --mirrors 1
+sudo ./scripts/run_waveshare.sh --mirrors 2
+sudo ./scripts/run_waveshare.sh --mirrors 4
+sudo ./scripts/run_waveshare.sh --mirrors 8
+sudo ./scripts/run_waveshare.sh --mirrors 16
 ```
 
 No sound:
