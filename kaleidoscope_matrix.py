@@ -22,7 +22,7 @@ except ImportError as error:
 
 SIZE = 64
 BLACK = (0, 0, 0)
-DEFAULT_COLOR = (182, 192, 239)
+DEFAULT_COLOR = (255, 255, 255)
 
 
 class ChimeSynth:

@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/home/tim/waveshare-kaleidoscope-matrix
-ExecStart=/home/tim/waveshare-kaleidoscope-matrix/.venv/bin/python3 /home/tim/waveshare-kaleidoscope-matrix/kaleidoscope_matrix.py --hardware-mapping regular --no-hardware-pulse --rows 64 --cols 64 --gpio-slowdown 5 --brightness 35 --color 182,192,239 --pwm-bits 5 --pwm-dither-bits 0 --limit-refresh-rate-hz 120 --fade 0.985 --ink 0.32 --turn-chance 0.035 --curve-chance 0.2 --speed 0.58 --brush-radius 1.45 --neighbor-boost-threshold 6 --audio --chime-volume 0.035 --chime-duration 0.18
+ExecStart=/home/tim/waveshare-kaleidoscope-matrix/.venv/bin/python3 /home/tim/waveshare-kaleidoscope-matrix/kaleidoscope_matrix.py --hardware-mapping regular --no-hardware-pulse --rows 64 --cols 64 --gpio-slowdown 5 --brightness 35 --color 255,255,255 --pwm-bits 5 --pwm-dither-bits 0 --limit-refresh-rate-hz 120 --fade 0.985 --ink 0.32 --turn-chance 0.035 --curve-chance 0.2 --speed 0.58 --brush-radius 1.45 --neighbor-boost-threshold 6 --audio --chime-volume 0.035 --chime-duration 0.18
 Restart=on-failure
 User=root
 
