@@ -24,4 +24,5 @@ exec "$PYTHON" kaleidoscope_matrix.py \
   --curve-chance 0.2 \
   --speed 0.58 \
   --brush-radius 1.45 \
+  --neighbor-boost-threshold 6 \
   "$@"

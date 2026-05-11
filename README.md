@@ -37,7 +37,8 @@ sudo ./.venv/bin/python3 kaleidoscope_matrix.py \
   --turn-chance 0.035 \
   --curve-chance 0.2 \
   --speed 0.58 \
-  --brush-radius 1.45
+  --brush-radius 1.45 \
+  --neighbor-boost-threshold 6
 ```
 
 More delicate:

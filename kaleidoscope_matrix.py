@@ -32,6 +32,7 @@ class Kaleidoscope:
         curve_chance: float,
         speed: float,
         brush_radius: float,
+        neighbor_boost_threshold: int,
     ) -> None:
         self.random = random.SystemRandom()
         self.color = color
@@ -42,6 +43,7 @@ class Kaleidoscope:
         self.curve_chance = curve_chance
         self.speed = speed
         self.brush_radius = brush_radius
+        self.neighbor_boost_threshold = neighbor_boost_threshold
         self.cells = [[0.0 for _ in range(SIZE)] for _ in range(SIZE)]
         self.x = 0.0
         self.y = 0.0
@@ -75,6 +77,8 @@ class Kaleidoscope:
         for y_pos, row in enumerate(self.cells):
             for x_pos, value in enumerate(row):
                 if value > 0.01:
+                    if self._lit_neighbor_count(x_pos, y_pos) >= self.neighbor_boost_threshold:
+                        value = 1.0
                     pixels[y_pos * SIZE + x_pos] = (
                         min(255, round(red * value)),
                         min(255, round(green * value)),
@@ -82,6 +86,18 @@ class Kaleidoscope:
                     )
 
         return pixels
+
+    def _lit_neighbor_count(self, x_pos: int, y_pos: int) -> int:
+        count = 0
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if dx == 0 and dy == 0:
+                    continue
+                near_x = x_pos + dx
+                near_y = y_pos + dy
+                if 0 <= near_x < SIZE and 0 <= near_y < SIZE and self.cells[near_y][near_x] > 0.08:
+                    count += 1
+        return count
 
     def _seed_random_pattern(self) -> None:
         seed_flips = 2 + self.random.randrange(5)
@@ -187,6 +203,7 @@ def create_state(args: argparse.Namespace) -> Kaleidoscope:
         curve_chance=args.curve_chance,
         speed=args.speed,
         brush_radius=args.brush_radius,
+        neighbor_boost_threshold=args.neighbor_boost_threshold,
     )
 
 
@@ -289,6 +306,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--curve-chance", type=float, default=0.2)
     parser.add_argument("--speed", type=float, default=0.58)
     parser.add_argument("--brush-radius", type=float, default=1.45)
+    parser.add_argument("--neighbor-boost-threshold", type=int, default=6)
     parser.add_argument("--color", type=parse_color, default=RED)
     parser.add_argument("--preview", type=Path)
     parser.add_argument("--preview-steps", type=int, default=700)
