@@ -18,6 +18,4 @@ exec "$PYTHON" kaleidoscope_matrix.py \
   --pwm-bits 1 \
   --pwm-dither-bits 0 \
   --limit-refresh-rate-hz 120 \
-  --twinkle-count 18 \
-  --twinkle-chance 0.7 \
   "$@"

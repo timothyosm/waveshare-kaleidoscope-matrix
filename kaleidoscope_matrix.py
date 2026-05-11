@@ -232,8 +232,6 @@ class Kaleidoscope:
         letter_duration: float,
         letter_hold: float,
         color: tuple[int, int, int],
-        twinkle_count: int,
-        twinkle_chance: float,
     ) -> None:
         self.random = random.SystemRandom()
         self.letter_renderer = letter_renderer
@@ -241,8 +239,6 @@ class Kaleidoscope:
         self.letter_duration = letter_duration
         self.letter_hold = letter_hold
         self.color = color
-        self.twinkle_count = twinkle_count
-        self.twinkle_chance = twinkle_chance
         self.cells = [[False for _ in range(SIZE)] for _ in range(SIZE)]
         self.ant_x = 0
         self.ant_y = 0
@@ -283,7 +279,6 @@ class Kaleidoscope:
         if self.flash_active:
             for x_pos, y_pos in self.flash_mask[: self.flash_visible_count]:
                 pixels[y_pos * SIZE + x_pos] = self.color
-            self._add_twinkle(pixels)
             return pixels
 
         for y_pos, row in enumerate(self.cells):
@@ -293,14 +288,7 @@ class Kaleidoscope:
 
         ant_index = self.ant_y * SIZE + self.ant_x
         pixels[ant_index] = BLACK if self.cells[self.ant_y][self.ant_x] else self.color
-        self._add_twinkle(pixels)
         return pixels
-
-    def _add_twinkle(self, pixels: list[tuple[int, int, int]]) -> None:
-        for _ in range(self.twinkle_count):
-            if self.random.random() <= self.twinkle_chance:
-                index = self.random.randrange(SIZE * SIZE)
-                pixels[index] = self.color
 
     def _update_flash(self, now: float) -> None:
         while self.flash_visible_count < len(self.flash_mask) and now >= self.next_reveal_at:
@@ -391,8 +379,6 @@ def create_state(args: argparse.Namespace) -> Kaleidoscope:
         letter_duration=args.letter_duration,
         letter_hold=args.letter_hold,
         color=args.color,
-        twinkle_count=args.twinkle_count,
-        twinkle_chance=args.twinkle_chance,
     )
 
 
@@ -491,8 +477,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--letter-delay", type=float, default=30.0)
     parser.add_argument("--letter-duration", type=float, default=5.0)
     parser.add_argument("--letter-hold", type=float, default=0.25)
-    parser.add_argument("--twinkle-count", type=int, default=18)
-    parser.add_argument("--twinkle-chance", type=float, default=0.7)
     parser.add_argument("--letter-y-offset", type=int, default=4)
     parser.add_argument("--font-size", type=int, default=58)
     parser.add_argument("--font", type=Path, default=DEFAULT_FONT)

@@ -31,9 +31,7 @@ sudo ./.venv/bin/python3 kaleidoscope_matrix.py \
   --gpio-slowdown 5 \
   --brightness 35 \
   --pwm-bits 1 \
-  --pwm-dither-bits 0 \
-  --twinkle-count 18 \
-  --twinkle-chance 0.7
+  --pwm-dither-bits 0
 ```
 
 If you are actually using an Adafruit HAT/Bonnet, try:
