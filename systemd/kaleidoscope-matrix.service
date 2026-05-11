@@ -1,0 +1,14 @@
+[Unit]
+Description=Kaleidoscope LED matrix
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/tim/waveshare-kaleidoscope-matrix
+ExecStart=/usr/bin/python3 /home/tim/waveshare-kaleidoscope-matrix/kaleidoscope_matrix.py --hardware-mapping regular --no-hardware-pulse --rows 64 --cols 64 --gpio-slowdown 4
+Restart=on-failure
+User=root
+
+[Install]
+WantedBy=multi-user.target
+

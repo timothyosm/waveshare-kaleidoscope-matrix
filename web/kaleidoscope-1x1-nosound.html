@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kaleidoscope Grid 1x1 No Sound</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Monsieur+La+Doulaise&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background: black;
+      }
+
+      .stage {
+        width: min(92vmin, 640px);
+        aspect-ratio: 1;
+      }
+
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stage">
+      <canvas id="grid" width="640" height="640"></canvas>
+    </main>
+
+    <script>
+      const size = 64;
+      const repeatCount = 1;
+      const visibleSize = size * repeatCount;
+      const canvas = document.querySelector("#grid");
+      const ctx = canvas.getContext("2d");
+      const pixelsPerCell = canvas.width / visibleSize;
+      const cells = Array.from({ length: size }, () => Array(size).fill(false));
+      const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const letterFont = '"Monsieur La Doulaise", cursive';
+      const letterFontSize = 58 * repeatCount;
+      const letterFontReady = document.fonts.load(`${letterFontSize}px ${letterFont}`, letters);
+      const flash = {
+        active: false,
+        mask: [],
+        revealTimer: 0,
+        visibleCount: 0,
+      };
+      const directions = [
+        [0, -1],
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+      ];
+      const ant = {};
+
+      function randomInt(max) {
+        const values = new Uint32Array(1);
+        crypto.getRandomValues(values);
+        return values[0] % max;
+      }
+
+      function symmetryPoints(x, y) {
+        const max = size - 1;
+        const points = [
+          [x, y],
+          [max - x, y],
+          [x, max - y],
+          [max - x, max - y],
+          [y, x],
+          [max - y, x],
+          [y, max - x],
+          [max - y, max - x],
+        ];
+
+        return [...new Set(points.map(([pointX, pointY]) => `${pointX},${pointY}`))]
+          .map((point) => point.split(",").map(Number));
+      }
+
+      function flipSymmetricCells(x, y) {
+        for (const [pointX, pointY] of symmetryPoints(x, y)) {
+          cells[pointY][pointX] = !cells[pointY][pointX];
+        }
+      }
+
+      function seedRandomPattern() {
+        const seedFlips = 8 + randomInt(17);
+
+        for (let i = 0; i < seedFlips; i += 1) {
+          flipSymmetricCells(randomInt(size), randomInt(size));
+        }
+      }
+
+      function resetKaleidoscope() {
+        for (const row of cells) {
+          row.fill(false);
+        }
+
+        ant.x = randomInt(size);
+        ant.y = randomInt(size);
+        ant.direction = randomInt(directions.length);
+        seedRandomPattern();
+      }
+
+      function drawCell(x, y, tileX, tileY) {
+        ctx.fillStyle = cells[y][x] ? "red" : "black";
+        ctx.fillRect(
+          (tileX * size + x) * pixelsPerCell,
+          (tileY * size + y) * pixelsPerCell,
+          pixelsPerCell,
+          pixelsPerCell,
+        );
+      }
+
+      function drawAnt() {
+        const radius = pixelsPerCell * 0.32;
+
+        ctx.fillStyle = cells[ant.y][ant.x] ? "black" : "red";
+
+        for (let tileY = 0; tileY < repeatCount; tileY += 1) {
+          for (let tileX = 0; tileX < repeatCount; tileX += 1) {
+            const centerX = (tileX * size + ant.x) * pixelsPerCell + pixelsPerCell / 2;
+            const centerY = (tileY * size + ant.y) * pixelsPerCell + pixelsPerCell / 2;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      function drawPixelLetter() {
+        ctx.fillStyle = "red";
+
+        for (const [x, y] of flash.mask.slice(0, flash.visibleCount)) {
+          ctx.fillRect(x * pixelsPerCell, y * pixelsPerCell, pixelsPerCell, pixelsPerCell);
+        }
+      }
+
+      function revealLetterPixel() {
+        if (flash.visibleCount < flash.mask.length) {
+          flash.visibleCount += 1;
+        }
+      }
+
+      function render() {
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (flash.active) {
+          drawPixelLetter();
+          return;
+        }
+
+        for (let tileY = 0; tileY < repeatCount; tileY += 1) {
+          for (let tileX = 0; tileX < repeatCount; tileX += 1) {
+            for (let y = 0; y < size; y += 1) {
+              for (let x = 0; x < size; x += 1) {
+                drawCell(x, y, tileX, tileY);
+              }
+            }
+          }
+        }
+
+        drawAnt();
+      }
+
+      function step() {
+        ant.direction = cells[ant.y][ant.x]
+          ? (ant.direction + 3) % 4
+          : (ant.direction + 1) % 4;
+        flipSymmetricCells(ant.x, ant.y);
+
+        let [dx, dy] = directions[ant.direction];
+        let nextX = ant.x + dx;
+        let nextY = ant.y + dy;
+
+        if (nextX < 0 || nextX >= size || nextY < 0 || nextY >= size) {
+          ant.direction = (ant.direction + 2) % 4;
+          [dx, dy] = directions[ant.direction];
+          nextX = ant.x + dx;
+          nextY = ant.y + dy;
+        }
+
+        ant.x = nextX;
+        ant.y = nextY;
+      }
+
+      function animate() {
+        if (!flash.active) {
+          step();
+        }
+
+        render();
+        requestAnimationFrame(animate);
+      }
+
+      function createLetterMask(letter) {
+        const letterCanvas = document.createElement("canvas");
+        const letterCtx = letterCanvas.getContext("2d", { willReadFrequently: true });
+        const mask = [];
+
+        letterCanvas.width = visibleSize;
+        letterCanvas.height = visibleSize;
+        letterCtx.clearRect(0, 0, visibleSize, visibleSize);
+        letterCtx.fillStyle = "white";
+        letterCtx.font = `${letterFontSize}px ${letterFont}`;
+        letterCtx.textAlign = "center";
+        letterCtx.textBaseline = "middle";
+        letterCtx.fillText(letter, visibleSize / 2, visibleSize / 2 + 4 * repeatCount);
+
+        const pixels = letterCtx.getImageData(0, 0, visibleSize, visibleSize).data;
+
+        for (let y = 0; y < visibleSize; y += 1) {
+          for (let x = 0; x < visibleSize; x += 1) {
+            const alpha = pixels[(y * visibleSize + x) * 4 + 3];
+
+            if (alpha > 12) {
+              mask.push([x, y]);
+            }
+          }
+        }
+
+        return mask;
+      }
+
+      function distanceSquared(a, b) {
+        const dx = a[0] - b[0];
+        const dy = a[1] - b[1];
+        return dx * dx + dy * dy;
+      }
+
+      function pointKey(point) {
+        return `${point[0]},${point[1]}`;
+      }
+
+      function findMostIsolatedCell(mask) {
+        let mostIsolated = mask[0];
+        let largestNearestDistance = -1;
+
+        for (const cell of mask) {
+          let nearestDistance = Infinity;
+
+          for (const other of mask) {
+            if (cell === other) {
+              continue;
+            }
+
+            nearestDistance = Math.min(nearestDistance, distanceSquared(cell, other));
+          }
+
+          if (nearestDistance > largestNearestDistance) {
+            largestNearestDistance = nearestDistance;
+            mostIsolated = cell;
+          }
+        }
+
+        return mostIsolated;
+      }
+
+      function buildBinaryGrid(mask) {
+        const grid = Array.from({ length: visibleSize }, () => Array(visibleSize).fill(false));
+
+        for (const [x, y] of mask) {
+          grid[y][x] = true;
+        }
+
+        return grid;
+      }
+
+      function neighborValues(grid, x, y) {
+        return [
+          grid[y - 1][x],
+          grid[y - 1][x + 1],
+          grid[y][x + 1],
+          grid[y + 1][x + 1],
+          grid[y + 1][x],
+          grid[y + 1][x - 1],
+          grid[y][x - 1],
+          grid[y - 1][x - 1],
+        ];
+      }
+
+      function transitionCount(grid, x, y) {
+        const neighbors = neighborValues(grid, x, y);
+        let transitions = 0;
+
+        for (let i = 0; i < neighbors.length; i += 1) {
+          if (!neighbors[i] && neighbors[(i + 1) % neighbors.length]) {
+            transitions += 1;
+          }
+        }
+
+        return transitions;
+      }
+
+      function thinningPass(grid, secondPass) {
+        const toDelete = [];
+
+        for (let y = 1; y < visibleSize - 1; y += 1) {
+          for (let x = 1; x < visibleSize - 1; x += 1) {
+            if (!grid[y][x]) {
+              continue;
+            }
+
+            const neighbors = neighborValues(grid, x, y);
+            const neighborCount = neighbors.filter(Boolean).length;
+            const transitions = transitionCount(grid, x, y);
+            const [p2, p3, p4, p5, p6, p7, p8] = neighbors;
+            const firstCondition = secondPass ? !(p2 && p4 && p8) : !(p2 && p4 && p6);
+            const secondCondition = secondPass ? !(p2 && p6 && p8) : !(p4 && p6 && p8);
+
+            if (
+              neighborCount >= 2 &&
+              neighborCount <= 6 &&
+              transitions === 1 &&
+              firstCondition &&
+              secondCondition
+            ) {
+              toDelete.push([x, y]);
+            }
+          }
+        }
+
+        for (const [x, y] of toDelete) {
+          grid[y][x] = false;
+        }
+
+        return toDelete.length > 0;
+      }
+
+      function skeletonize(mask) {
+        const grid = buildBinaryGrid(mask);
+        let changed = true;
+
+        while (changed) {
+          const firstChanged = thinningPass(grid, false);
+          const secondChanged = thinningPass(grid, true);
+          changed = firstChanged || secondChanged;
+        }
+
+        const skeleton = [];
+
+        for (let y = 0; y < visibleSize; y += 1) {
+          for (let x = 0; x < visibleSize; x += 1) {
+            if (grid[y][x]) {
+              skeleton.push([x, y]);
+            }
+          }
+        }
+
+        return skeleton.length > 0 ? skeleton : mask;
+      }
+
+      function findNearestCell(cellsToSearch, target) {
+        let nearest = cellsToSearch[0];
+        let nearestDistance = Infinity;
+
+        for (const cell of cellsToSearch) {
+          const cellDistance = distanceSquared(cell, target);
+
+          if (cellDistance < nearestDistance) {
+            nearestDistance = cellDistance;
+            nearest = cell;
+          }
+        }
+
+        return nearest;
+      }
+
+      function orderStrokePath(cellsToOrder, startCell) {
+        const remaining = new Map(cellsToOrder.map((cell) => [pointKey(cell), cell]));
+        const ordered = [];
+        let current = startCell;
+
+        while (remaining.size > 0) {
+          const currentKey = pointKey(current);
+          const cell = remaining.get(currentKey) ?? findNearestCell([...remaining.values()], current);
+
+          ordered.push(cell);
+          remaining.delete(pointKey(cell));
+
+          let nearestCell = null;
+          let nearestDistance = Infinity;
+
+          for (const candidate of remaining.values()) {
+            const candidateDistance = distanceSquared(cell, candidate);
+
+            if (candidateDistance < nearestDistance) {
+              nearestDistance = candidateDistance;
+              nearestCell = candidate;
+            }
+          }
+
+          current = nearestCell;
+        }
+
+        return ordered;
+      }
+
+      function createLetterReveal(letter) {
+        const mask = createLetterMask(letter);
+
+        if (mask.length === 0) {
+          return [];
+        }
+
+        const skeleton = skeletonize(mask);
+        const isolatedCell = findMostIsolatedCell(mask);
+        const startCell = findNearestCell(skeleton, isolatedCell);
+        const strokePath = orderStrokePath(skeleton, startCell);
+        const strokeIndexByKey = new Map(strokePath.map((cell, index) => [pointKey(cell), index]));
+
+        return mask
+          .map((cell) => {
+            const nearestStrokeCell = findNearestCell(strokePath, cell);
+
+            return {
+              cell,
+              order: strokeIndexByKey.get(pointKey(nearestStrokeCell)) ?? 0,
+              distance: distanceSquared(cell, nearestStrokeCell),
+            };
+          })
+          .sort((a, b) => a.order - b.order || a.distance - b.distance)
+          .map(({ cell }) => cell);
+      }
+
+      async function showRandomLetter() {
+        await letterFontReady;
+        window.clearInterval(flash.revealTimer);
+        flash.mask = createLetterReveal(letters[randomInt(letters.length)]);
+        flash.visibleCount = 0;
+        flash.active = true;
+        revealLetterPixel();
+
+        if (flash.visibleCount === flash.mask.length) {
+          flash.active = false;
+          flash.visibleCount = 0;
+          resetKaleidoscope();
+          setTimeout(showRandomLetter, 30000);
+          return;
+        }
+
+        flash.revealTimer = window.setInterval(() => {
+          revealLetterPixel();
+
+          if (flash.visibleCount === flash.mask.length) {
+            window.clearInterval(flash.revealTimer);
+            setTimeout(() => {
+              flash.active = false;
+              flash.visibleCount = 0;
+              resetKaleidoscope();
+              setTimeout(showRandomLetter, 30000);
+            }, 250);
+          }
+        }, Math.max(8, Math.floor(5000 / Math.max(1, flash.mask.length))));
+      }
+
+      resetKaleidoscope();
+      render();
+      animate();
+      letterFontReady.then(() => {
+        setTimeout(showRandomLetter, 30000);
+      });
+    </script>
+  </body>
+</html>
+
