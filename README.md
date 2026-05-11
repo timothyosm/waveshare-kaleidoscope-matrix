@@ -1,6 +1,6 @@
 # Waveshare Kaleidoscope Matrix
 
-64x64 Raspberry Pi HUB75 LED matrix port of `kaleidoscope-1x1.html`, with audio removed.
+64x64 Raspberry Pi HUB75 kaleidoscope animation. This version keeps the ant-driven symmetric pattern running continuously, with no audio and no letter drawing.
 
 ## Raspberry Pi Setup
 
@@ -50,12 +50,6 @@ Generate a still frame without matrix hardware:
 
 ```bash
 python3 kaleidoscope_matrix.py --preview preview.png
-```
-
-Open the no-sound browser version:
-
-```bash
-open web/kaleidoscope-1x1-nosound.html
 ```
 
 ## systemd
