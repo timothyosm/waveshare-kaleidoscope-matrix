@@ -18,7 +18,7 @@ except ImportError as error:
 
 SIZE = 64
 BLACK = (0, 0, 0)
-RED = (255, 0, 0)
+WHITE = (255, 255, 255)
 
 
 class Kaleidoscope:
@@ -307,7 +307,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--speed", type=float, default=0.58)
     parser.add_argument("--brush-radius", type=float, default=1.45)
     parser.add_argument("--neighbor-boost-threshold", type=int, default=6)
-    parser.add_argument("--color", type=parse_color, default=RED)
+    parser.add_argument("--color", type=parse_color, default=WHITE)
     parser.add_argument("--preview", type=Path)
     parser.add_argument("--preview-steps", type=int, default=700)
     parser.add_argument("--preview-scale", type=int, default=8)
