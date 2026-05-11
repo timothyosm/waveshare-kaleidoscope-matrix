@@ -402,6 +402,8 @@ def run_matrix(args: argparse.Namespace) -> None:
             "rgbmatrix is not installed. Run ./scripts/install_pi.sh on the Pi first."
         ) from error
 
+    state = create_state(args)
+
     options = RGBMatrixOptions()
     options.rows = args.rows
     options.cols = args.cols
@@ -414,7 +416,6 @@ def run_matrix(args: argparse.Namespace) -> None:
 
     matrix = RGBMatrix(options=options)
     canvas = matrix.CreateFrameCanvas()
-    state = create_state(args)
     running = True
 
     def stop(_signum: int, _frame: object) -> None:
@@ -484,4 +485,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
