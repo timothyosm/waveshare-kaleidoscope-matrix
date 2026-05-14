@@ -86,6 +86,13 @@ No sound:
 sudo ./scripts/run_waveshare.sh --no-audio
 ```
 
+Set color with a hex code:
+
+```bash
+sudo ./scripts/run_waveshare.sh --color '#b6c0ef'
+sudo ./scripts/run_waveshare.sh --color '#ffffff'
+```
+
 If you are actually using an Adafruit HAT/Bonnet, try:
 
 ```bash

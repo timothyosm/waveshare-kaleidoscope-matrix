@@ -393,14 +393,25 @@ class Kaleidoscope:
 
 
 def parse_color(value: str) -> tuple[int, int, int]:
+    color_value = value.strip()
+    hex_value = color_value.removeprefix("#")
+    if len(hex_value) in (3, 6) and all(char in "0123456789abcdefABCDEF" for char in hex_value):
+        if len(hex_value) == 3:
+            hex_value = "".join(char * 2 for char in hex_value)
+        return (
+            int(hex_value[0:2], 16),
+            int(hex_value[2:4], 16),
+            int(hex_value[4:6], 16),
+        )
+
     parts = value.split(",")
     if len(parts) != 3:
-        raise argparse.ArgumentTypeError("color must be R,G,B")
+        raise argparse.ArgumentTypeError("color must be #RRGGBB or R,G,B")
 
     try:
         color = tuple(max(0, min(255, int(part))) for part in parts)
     except ValueError as error:
-        raise argparse.ArgumentTypeError("color must be numeric R,G,B") from error
+        raise argparse.ArgumentTypeError("color must be #RRGGBB or numeric R,G,B") from error
 
     return color  # type: ignore[return-value]
 
