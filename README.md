@@ -93,6 +93,12 @@ sudo ./scripts/run_waveshare.sh --color '#b6c0ef'
 sudo ./scripts/run_waveshare.sh --color '#ffffff'
 ```
 
+Use the magma heat palette:
+
+```bash
+sudo ./scripts/run_waveshare.sh --magma
+```
+
 If you are actually using an Adafruit HAT/Bonnet, try:
 
 ```bash

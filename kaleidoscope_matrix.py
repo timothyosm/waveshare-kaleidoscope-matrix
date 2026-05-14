@@ -23,6 +23,34 @@ except ImportError as error:
 SIZE = 64
 BLACK = (0, 0, 0)
 DEFAULT_COLOR = (255, 255, 255)
+MAGMA_PALETTE = (
+    (0.0, (0, 0, 4)),
+    (0.13, (28, 16, 68)),
+    (0.25, (79, 18, 123)),
+    (0.38, (129, 37, 129)),
+    (0.50, (181, 54, 122)),
+    (0.63, (229, 80, 100)),
+    (0.75, (251, 135, 97)),
+    (0.88, (254, 194, 135)),
+    (1.0, (252, 253, 191)),
+)
+
+
+def magma_color(value: float) -> tuple[int, int, int]:
+    value = max(0.0, min(1.0, value))
+
+    for index in range(1, len(MAGMA_PALETTE)):
+        left_stop, left_color = MAGMA_PALETTE[index - 1]
+        right_stop, right_color = MAGMA_PALETTE[index]
+        if value <= right_stop:
+            span = right_stop - left_stop
+            amount = 0.0 if span == 0 else (value - left_stop) / span
+            return tuple(
+                round(left_color[channel] + (right_color[channel] - left_color[channel]) * amount)
+                for channel in range(3)
+            )  # type: ignore[return-value]
+
+    return MAGMA_PALETTE[-1][1]
 
 
 class ChimeSynth:
@@ -136,6 +164,7 @@ class Kaleidoscope:
     def __init__(
         self,
         color: tuple[int, int, int],
+        magma: bool,
         fade: float,
         ink: float,
         step_stride: int,
@@ -155,6 +184,7 @@ class Kaleidoscope:
     ) -> None:
         self.random = random.SystemRandom()
         self.color = color
+        self.magma = magma
         self.fade = fade
         self.ink = ink
         self.step_stride = step_stride
@@ -207,6 +237,10 @@ class Kaleidoscope:
         for y_pos, row in enumerate(self.cells):
             for x_pos, value in enumerate(row):
                 if value > 0.01:
+                    if self.magma:
+                        pixels[y_pos * SIZE + x_pos] = magma_color(value)
+                        continue
+
                     if value > 0.08 and self._lit_neighbor_count(x_pos, y_pos) >= self.neighbor_boost_threshold:
                         value = 1.0
                     pixels[y_pos * SIZE + x_pos] = (
@@ -419,6 +453,7 @@ def parse_color(value: str) -> tuple[int, int, int]:
 def create_state(args: argparse.Namespace, chime_synth: ChimeSynth | None = None) -> Kaleidoscope:
     return Kaleidoscope(
         color=args.color,
+        magma=args.magma,
         fade=args.fade,
         ink=args.ink,
         step_stride=args.step_stride,
@@ -561,6 +596,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--chime-max-pending", type=int, default=56)
     parser.add_argument("--chime-threshold", type=float, default=0.14)
     parser.add_argument("--color", type=parse_color, default=DEFAULT_COLOR)
+    parser.add_argument("--magma", action="store_true")
     parser.add_argument("--preview", type=Path)
     parser.add_argument("--preview-steps", type=int, default=700)
     parser.add_argument("--preview-scale", type=int, default=8)
