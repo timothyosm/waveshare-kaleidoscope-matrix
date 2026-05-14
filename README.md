@@ -42,6 +42,11 @@ sudo ./.venv/bin/python3 kaleidoscope_matrix.py \
   --brush-radius 1.45 \
   --neighbor-boost-threshold 6 \
   --mirrors 8 \
+  --spark-count 3 \
+  --spark-chance 0.12 \
+  --spark-brightness 0.02 \
+  --spark-distance 7 \
+  --spark-collision-threshold 0.16 \
   --audio \
   --chime-volume 0.035 \
   --chime-duration 0.18
@@ -67,6 +72,12 @@ sudo ./scripts/run_waveshare.sh --mirrors 2
 sudo ./scripts/run_waveshare.sh --mirrors 4
 sudo ./scripts/run_waveshare.sh --mirrors 8
 sudo ./scripts/run_waveshare.sh --mirrors 16
+```
+
+Turn collision sparks off:
+
+```bash
+sudo ./scripts/run_waveshare.sh --spark-count 0
 ```
 
 No sound:

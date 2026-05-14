@@ -27,6 +27,11 @@ exec "$PYTHON" kaleidoscope_matrix.py \
   --brush-radius 1.45 \
   --neighbor-boost-threshold 6 \
   --mirrors 8 \
+  --spark-count 3 \
+  --spark-chance 0.12 \
+  --spark-brightness 0.02 \
+  --spark-distance 7 \
+  --spark-collision-threshold 0.16 \
   --audio \
   --chime-volume 0.035 \
   --chime-duration 0.18 \

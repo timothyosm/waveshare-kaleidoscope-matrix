@@ -145,6 +145,11 @@ class Kaleidoscope:
         brush_radius: float,
         neighbor_boost_threshold: int,
         mirrors: int,
+        spark_count: int,
+        spark_chance: float,
+        spark_brightness: float,
+        spark_distance: float,
+        spark_collision_threshold: float,
         chime_synth: ChimeSynth | None = None,
         chime_threshold: float = 0.12,
     ) -> None:
@@ -159,6 +164,11 @@ class Kaleidoscope:
         self.brush_radius = brush_radius
         self.neighbor_boost_threshold = neighbor_boost_threshold
         self.mirrors = max(1, mirrors)
+        self.spark_count = max(0, spark_count)
+        self.spark_chance = max(0.0, min(1.0, spark_chance))
+        self.spark_brightness = max(0.0, min(0.08, spark_brightness))
+        self.spark_distance = max(1.0, spark_distance)
+        self.spark_collision_threshold = max(0.0, min(1.0, spark_collision_threshold))
         self.chime_synth = chime_synth
         self.chime_threshold = chime_threshold
         self.cells = [[0.0 for _ in range(SIZE)] for _ in range(SIZE)]
@@ -194,7 +204,7 @@ class Kaleidoscope:
         for y_pos, row in enumerate(self.cells):
             for x_pos, value in enumerate(row):
                 if value > 0.01:
-                    if self._lit_neighbor_count(x_pos, y_pos) >= self.neighbor_boost_threshold:
+                    if value > 0.08 and self._lit_neighbor_count(x_pos, y_pos) >= self.neighbor_boost_threshold:
                         value = 1.0
                     pixels[y_pos * SIZE + x_pos] = (
                         min(255, round(red * value)),
@@ -270,15 +280,43 @@ class Kaleidoscope:
                     continue
                 weight = (1 - distance / radius) ** 1.7
                 old_value = self.cells[y_cell][x_cell]
-                new_value = min(1.0, old_value + amount * weight)
+                added = amount * weight
+                new_value = min(1.0, old_value + added)
                 self.cells[y_cell][x_cell] = new_value
+
+                if (
+                    self.spark_count
+                    and old_value >= self.spark_collision_threshold
+                    and added > 0.04
+                    and self.random.random() < self.spark_chance
+                ):
+                    self._emit_sparks(x_cell, y_cell)
 
                 if (
                     self.chime_synth
                     and old_value < self.chime_threshold <= new_value
-                    and amount * weight > 0.04
+                    and added > 0.04
                 ):
                     self.chime_synth.trigger(x_cell, y_cell, new_value)
+
+    def _emit_sparks(self, x_pos: int, y_pos: int) -> None:
+        center = (SIZE - 1) / 2
+        if x_pos == center and y_pos == center:
+            base_angle = self.random.random() * math.tau
+        else:
+            base_angle = math.atan2(y_pos - center, x_pos - center)
+
+        for _ in range(self.spark_count):
+            angle = base_angle + self.random.uniform(-0.9, 0.9)
+            distance = self.random.uniform(1.5, self.spark_distance)
+            spark_x = round(x_pos + math.cos(angle) * distance)
+            spark_y = round(y_pos + math.sin(angle) * distance)
+
+            if 0 <= spark_x < SIZE and 0 <= spark_y < SIZE:
+                self.cells[spark_y][spark_x] = max(
+                    self.cells[spark_y][spark_x],
+                    self.spark_brightness,
+                )
 
     def _step(self) -> None:
         center = (SIZE - 1) / 2
@@ -333,6 +371,11 @@ def create_state(args: argparse.Namespace, chime_synth: ChimeSynth | None = None
         brush_radius=args.brush_radius,
         neighbor_boost_threshold=args.neighbor_boost_threshold,
         mirrors=args.mirrors,
+        spark_count=args.spark_count,
+        spark_chance=args.spark_chance,
+        spark_brightness=args.spark_brightness,
+        spark_distance=args.spark_distance,
+        spark_collision_threshold=args.spark_collision_threshold,
         chime_synth=chime_synth,
         chime_threshold=args.chime_threshold,
     )
@@ -448,6 +491,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--brush-radius", type=float, default=1.45)
     parser.add_argument("--neighbor-boost-threshold", type=int, default=6)
     parser.add_argument("--mirrors", type=int, default=8)
+    parser.add_argument("--spark-count", type=int, default=3)
+    parser.add_argument("--spark-chance", type=float, default=0.12)
+    parser.add_argument("--spark-brightness", type=float, default=0.02)
+    parser.add_argument("--spark-distance", type=float, default=7.0)
+    parser.add_argument("--spark-collision-threshold", type=float, default=0.16)
     parser.add_argument("--audio", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--audio-device", default="")
     parser.add_argument("--chime-volume", type=float, default=0.035)
