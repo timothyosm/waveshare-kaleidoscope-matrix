@@ -43,7 +43,7 @@ sudo ./.venv/bin/python3 kaleidoscope_matrix.py \
   --neighbor-boost-threshold 6 \
   --mirrors 8 \
   --spark-count 3 \
-  --spark-chance 0.12 \
+  --spark-chance 1.0 \
   --spark-brightness 0.02 \
   --spark-distance 7 \
   --spark-collision-threshold 0.16 \

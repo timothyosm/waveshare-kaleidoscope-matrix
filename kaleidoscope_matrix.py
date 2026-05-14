@@ -177,12 +177,14 @@ class Kaleidoscope:
         self.heading = 0.0
         self.curl = 0.0
         self.phase = 0.0
+        self.sparks: list[tuple[float, float, float, float, int]] = []
         self.reset(0.0)
 
     def reset(self, now: float) -> None:
         for row in self.cells:
             for x_pos in range(SIZE):
                 row[x_pos] = 0.0
+        self.sparks = []
 
         center = (SIZE - 1) / 2
         self.x = center + self.random.uniform(-4.0, 4.0)
@@ -194,6 +196,7 @@ class Kaleidoscope:
 
     def update(self, _now: float) -> None:
         self._fade()
+        self._move_sparks()
         for _ in range(self.step_stride):
             self._step()
 
@@ -308,15 +311,58 @@ class Kaleidoscope:
 
         for _ in range(self.spark_count):
             angle = base_angle + self.random.uniform(-0.9, 0.9)
-            distance = self.random.uniform(1.5, self.spark_distance)
-            spark_x = round(x_pos + math.cos(angle) * distance)
-            spark_y = round(y_pos + math.sin(angle) * distance)
+            speed = self.random.uniform(0.8, 1.45)
+            travel = self.random.uniform(2.5, self.spark_distance)
+            life = max(2, round(travel / speed))
+            spark_x = x_pos + math.cos(angle) * 0.9
+            spark_y = y_pos + math.sin(angle) * 0.9
+            spark = (
+                spark_x,
+                spark_y,
+                math.cos(angle) * speed,
+                math.sin(angle) * speed,
+                life,
+            )
+            self.sparks.append(spark)
+            self._draw_spark(spark_x, spark_y)
 
-            if 0 <= spark_x < SIZE and 0 <= spark_y < SIZE:
-                self.cells[spark_y][spark_x] = max(
-                    self.cells[spark_y][spark_x],
-                    self.spark_brightness,
-                )
+        if len(self.sparks) > 900:
+            self.sparks = self.sparks[-900:]
+
+    def _move_sparks(self) -> None:
+        next_sparks = []
+
+        for x_pos, y_pos, velocity_x, velocity_y, life in self.sparks:
+            x_pos += velocity_x
+            y_pos += velocity_y
+            life -= 1
+
+            if life <= 0:
+                continue
+
+            if self._draw_spark(x_pos, y_pos):
+                next_sparks.append((
+                    x_pos,
+                    y_pos,
+                    velocity_x * 0.96,
+                    velocity_y * 0.96,
+                    life,
+                ))
+
+        self.sparks = next_sparks
+
+    def _draw_spark(self, x_pos: float, y_pos: float) -> bool:
+        spark_x = round(x_pos)
+        spark_y = round(y_pos)
+
+        if not (0 <= spark_x < SIZE and 0 <= spark_y < SIZE):
+            return False
+
+        self.cells[spark_y][spark_x] = max(
+            self.cells[spark_y][spark_x],
+            self.spark_brightness,
+        )
+        return True
 
     def _step(self) -> None:
         center = (SIZE - 1) / 2
@@ -492,7 +538,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--neighbor-boost-threshold", type=int, default=6)
     parser.add_argument("--mirrors", type=int, default=8)
     parser.add_argument("--spark-count", type=int, default=3)
-    parser.add_argument("--spark-chance", type=float, default=0.12)
+    parser.add_argument("--spark-chance", type=float, default=1.0)
     parser.add_argument("--spark-brightness", type=float, default=0.02)
     parser.add_argument("--spark-distance", type=float, default=7.0)
     parser.add_argument("--spark-collision-threshold", type=float, default=0.16)
