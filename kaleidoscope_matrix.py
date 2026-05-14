@@ -265,7 +265,10 @@ class Kaleidoscope:
             for x_pos, value in enumerate(row):
                 if value > 0.01:
                     if self.magma:
-                        pixels[y_pos * SIZE + x_pos] = magma_color(value)
+                        if value > 0.08 and self._lit_neighbor_count(x_pos, y_pos) >= self.neighbor_boost_threshold:
+                            pixels[y_pos * SIZE + x_pos] = DEFAULT_COLOR
+                        else:
+                            pixels[y_pos * SIZE + x_pos] = magma_color(value)
                         continue
 
                     if value > 0.08 and self._lit_neighbor_count(x_pos, y_pos) >= self.neighbor_boost_threshold:

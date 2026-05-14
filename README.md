@@ -99,6 +99,8 @@ Use the purple-to-cream magma heat palette:
 sudo ./scripts/run_waveshare.sh --magma
 ```
 
+Dense neighbor-boosted pixels still render pure white in magma mode.
+
 If you are actually using an Adafruit HAT/Bonnet, try:
 
 ```bash
