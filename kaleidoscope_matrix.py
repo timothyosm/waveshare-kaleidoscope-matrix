@@ -23,16 +23,43 @@ except ImportError as error:
 SIZE = 64
 BLACK = (0, 0, 0)
 DEFAULT_COLOR = (255, 255, 255)
-MAGMA_PALETTE = (
-    (0.0, (0, 0, 4)),
-    (0.13, (28, 16, 68)),
-    (0.25, (79, 18, 123)),
-    (0.38, (129, 37, 129)),
-    (0.50, (181, 54, 122)),
-    (0.63, (229, 80, 100)),
-    (0.75, (251, 135, 97)),
-    (0.88, (254, 194, 135)),
-    (1.0, (252, 253, 191)),
+MAGMA_HEX = (
+    "4B2991",
+    "5A2995",
+    "692A99",
+    "782B9D",
+    "872CA2",
+    "952EA0",
+    "A3319F",
+    "B1339E",
+    "C0369D",
+    "CA3C97",
+    "D44292",
+    "DF488D",
+    "EA4F88",
+    "ED5983",
+    "F2637F",
+    "F66D7A",
+    "FA7876",
+    "F98477",
+    "F89078",
+    "F79C79",
+    "F6A97A",
+    "F3B584",
+    "F1C18E",
+    "EFCC98",
+    "EDD9A3",
+)
+MAGMA_PALETTE = tuple(
+    (
+        index / (len(MAGMA_HEX) - 1),
+        (
+            int(hex_value[0:2], 16),
+            int(hex_value[2:4], 16),
+            int(hex_value[4:6], 16),
+        ),
+    )
+    for index, hex_value in enumerate(MAGMA_HEX)
 )
 
 

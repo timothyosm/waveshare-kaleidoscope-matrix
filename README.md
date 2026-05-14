@@ -93,7 +93,7 @@ sudo ./scripts/run_waveshare.sh --color '#b6c0ef'
 sudo ./scripts/run_waveshare.sh --color '#ffffff'
 ```
 
-Use the magma heat palette:
+Use the purple-to-cream magma heat palette:
 
 ```bash
 sudo ./scripts/run_waveshare.sh --magma
